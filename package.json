@@ -1,0 +1,168 @@
+{
+  "name": "stellar-stm32-tools",
+  "displayName": "Stellar STM32 Tools",
+  "description": "Complete STM32 development environment for VS Code: build, flash, monitor, debug",
+  "version": "0.3.0",
+  "publisher": "SyntoLab",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Embedded",
+    "Debuggers",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "stm32",
+    "stm32cubemx",
+    "arm",
+    "embedded",
+    "cortex-m",
+    "microcontroller",
+    "gcc",
+    "makefile",
+    "serial",
+    "monitor"
+  ],
+  "main": "./src/activation.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:stellar-stm32-platform.view"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "stm32.setupProject", "title": "STM32: Setup Project" },
+      { "command": "stm32.checkTools", "title": "STM32: Check Tools" },
+      { "command": "stm32.openTerminal", "title": "STM32: Open Terminal" },
+      { "command": "stm32.refreshView", "title": "STM32: Refresh View" },
+      { "command": "stm32.createProjectStructure", "title": "STM32: Create Project Structure" },
+      
+      { "command": "stm32.checkLinkerScript", "title": "STM32: Check Linker Script" },
+      { "command": "stm32.updateProjectPaths", "title": "STM32: Update Project Paths" },
+      { "command": "stm32.restoreOriginalMakefile", "title": "STM32: Restore Original Makefile" },
+      
+      { "command": "stm32.build", "title": "STM32: Build" },
+      { "command": "stm32.quickBuild", "title": "STM32: Quick Build" },
+      { "command": "stm32.buildWithDebug", "title": "STM32: Build with Debug" },
+      { "command": "stm32.buildRelease", "title": "STM32: Build Release" },
+      { "command": "stm32.clean", "title": "STM32: Clean" },
+      { "command": "stm32.fullClean", "title": "STM32: Full Clean" },
+      { "command": "stm32.analyzeFirmwareSize", "title": "STM32: Analyze Firmware Size" },
+      { "command": "stm32.showBuildInfo", "title": "STM32: Show Build Info" },
+      { "command": "stm32.fixMakefile", "title": "STM32: Fix Makefile" },
+      
+      { "command": "stm32.upload", "title": "STM32: Upload" },
+      { "command": "stm32.quickFlash", "title": "STM32: Quick Flash" },
+      { "command": "stm32.uploadAndMonitor", "title": "STM32: Upload & Monitor" },
+      { "command": "stm32.uploadWithoutReset", "title": "STM32: Upload without Reset" },
+      { "command": "stm32.verifyFlash", "title": "STM32: Verify Flash" },
+      { "command": "stm32.eraseFlash", "title": "STM32: Erase Flash" },
+      { "command": "stm32.resetMicrocontroller", "title": "STM32: Reset Microcontroller" },
+      { "command": "stm32.showFlashHistory", "title": "STM32: Show Flash History" },
+      { "command": "stm32.clearFlashHistory", "title": "STM32: Clear Flash History" },
+      { "command": "stm32.showFirmwareInfo", "title": "STM32: Show Firmware Info" },
+      
+      { "command": "stm32.monitor", "title": "STM32: Monitor" },
+      { "command": "stm32.smartMonitor", "title": "STM32: Smart Monitor" },
+      { "command": "stm32.stopMonitor", "title": "STM32: Stop Monitor" },
+      { "command": "stm32.resetMonitor", "title": "STM32: Reset Monitor" },
+      { "command": "stm32.changeBaudRate", "title": "STM32: Change Baud Rate" },
+      { "command": "stm32.sendCommandToMonitor", "title": "STM32: Send Command to Monitor" },
+      { "command": "stm32.saveMonitorLogs", "title": "STM32: Save Monitor Logs" },
+      { "command": "stm32.configureMonitor", "title": "STM32: Configure Monitor" },
+      { "command": "stm32.showMonitorHistory", "title": "STM32: Show Monitor History" },
+      { "command": "stm32.exportMonitorSettings", "title": "STM32: Export Monitor Settings" },
+      { "command": "stm32.checkPythonInstallation", "title": "STM32: Check Python Installation" },
+      
+      { "command": "stm32.listDevices", "title": "STM32: List Devices" },
+      { "command": "stm32.scanPorts", "title": "STM32: Scan Ports" },
+      { "command": "stm32.scanAllPorts", "title": "STM32: Scan All Ports" },
+      { "command": "stm32.testPortConnection", "title": "STM32: Test Port Connection" },
+      { "command": "stm32.testAllPorts", "title": "STM32: Test All Ports" },
+      { "command": "stm32.checkStLinkConnection", "title": "STM32: Check ST-LINK Connection" },
+      { "command": "stm32.testProgrammer", "title": "STM32: Test Programmer" },
+      { "command": "stm32.checkMcuConnection", "title": "STM32: Check MCU Connection" },
+      { "command": "stm32.readMcuInfo", "title": "STM32: Read MCU Info" },
+      { "command": "stm32.checkFirmwareInMcu", "title": "STM32: Check Firmware in MCU" },
+      
+      { "command": "stm32.checkSystemRequirements", "title": "STM32: Check System Requirements" },
+      { "command": "stm32.createSystemReport", "title": "STM32: Create System Report" },
+      { "command": "stm32.checkNetworkConnection", "title": "STM32: Check Network Connection" },
+      { "command": "stm32.configureProxy", "title": "STM32: Configure Proxy" },
+      { "command": "stm32.installMissingTools", "title": "STM32: Install Missing Tools" },
+      { "command": "stm32.resetToolsConfiguration", "title": "STM32: Reset Tools Configuration" },
+      { "command": "stm32.exportToolsConfiguration", "title": "STM32: Export Tools Configuration" },
+      { "command": "stm32.quickToolsCheck", "title": "STM32: Quick Tools Check" },
+      
+      { "command": "stm32.projectConfig", "title": "STM32: Open Project Config" },
+      { "command": "stm32.updatePaths", "title": "STM32: Update Tool Paths" },
+      { "command": "stm32.debug", "title": "STM32: Start Debugging" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "stellar-stm32-platform",
+          "title": "Stellar STM32",
+          "icon": "media/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "stellar-stm32-platform": [
+        {
+          "id": "stellar-stm32-platform.view",
+          "name": "STM32 Tools",
+          "icon": "media/icon.png",
+          "contextualTitle": "STM32 Tools"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "STM32 Tools",
+      "properties": {
+        "stm32.autoUpdateMakefile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically update Makefile when config changes"
+        },
+        "stm32.clearBufferOnStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Clear serial buffer when starting monitor"
+        },
+        "stm32.defaultBaudRate": {
+          "type": "number",
+          "default": 115200,
+          "description": "Default baud rate for serial monitor"
+        },
+        "stm32.showTimestamps": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show timestamps in serial monitor"
+        }
+      }
+    }
+  },
+"scripts": {
+    "compile": "echo 'No TypeScript - using JS directly'",
+    "watch": "echo 'No watch needed'",
+    "prepublishOnly": "npm run compile",
+    "pkg": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.29.0"
+  },
+  "dependencies": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/stellar-stm32-tools"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/stellar-stm32-tools/issues"
+  },
+  "homepage": "https://github.com/yourusername/stellar-stm32-tools#readme"
+}
