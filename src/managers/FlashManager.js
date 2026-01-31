@@ -1,4 +1,3 @@
-// managers/FlashManager.js
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
@@ -16,26 +15,36 @@ class FlashManager {
   }
 
   /**
-   * Прошивка устройства
+   * Прошивка устройства (автоматически после сборки без подтверждения)
    */
   async upload(forceBuild = false) {
     console.log('Upload command called');
     
     // Всегда выполняем сборку перед прошивкой
+    this.outputChannel.clear();
+    this.outputChannel.show();
+    this.outputChannel.appendLine('🚀 Начинаем процесс сборки и прошивки...');
+    
     const buildSuccess = await this.buildManager.build();
     if (!buildSuccess) {
+      this.outputChannel.appendLine('❌ Сборка не удалась. Прошивка отменена.');
       vscode.window.showErrorMessage('Сборка не удалась. Прошивка отменена.');
       return false;
     }
     
     // После сборки находим файл прошивки
+    this.outputChannel.appendLine('🔍 Поиск файла прошивки...');
     const firmwarePath = await this.findFirmwareFile();
     
     if (!firmwarePath) {
+      this.outputChannel.appendLine('❌ Прошивка не найдена после сборки');
       vscode.window.showErrorMessage('Прошивка не найдена после сборки');
       return false;
     }
     
+    this.outputChannel.appendLine(`✅ Найден файл прошивки: ${path.basename(firmwarePath)}`);
+    
+    // Немедленно начинаем прошивку без подтверждения
     return await this.flashFirmware(firmwarePath);
   }
 
@@ -56,9 +65,6 @@ class FlashManager {
       // Любые hex/bin файлы в build
       path.join(this.workspacePath, 'build', '*.hex'),
       path.join(this.workspacePath, 'build', '*.bin'),
-      // В корне проекта (для старых проектов)
-      path.join(this.workspacePath, `${projectName}.hex`),
-      path.join(this.workspacePath, `${projectName}.bin`)
     ];
     
     // Проверяем конкретные пути
@@ -89,10 +95,11 @@ class FlashManager {
   }
 
   /**
-   * Прошивка файла в устройство
+   * Прошивка файла в устройство (без диалогов подтверждения)
    */
   async flashFirmware(firmwarePath) {
     if (!firmwarePath || !fs.existsSync(firmwarePath)) {
+      this.outputChannel.appendLine(`❌ Файл прошивки не найден: ${firmwarePath}`);
       vscode.window.showErrorMessage(`Файл прошивки не найден: ${firmwarePath}`);
       return false;
     }
@@ -106,6 +113,7 @@ class FlashManager {
     // Проверяем доступность программатора
     const programmerPath = this.configManager.projectConfig.programmerPath;
     if (!fs.existsSync(programmerPath)) {
+      this.outputChannel.appendLine(`❌ Программер не найден: ${programmerPath}`);
       vscode.window.showErrorMessage(
         `Программер не найден: ${programmerPath}`,
         'Обновить путь'
@@ -117,32 +125,17 @@ class FlashManager {
       return false;
     }
 
-    // Показываем информацию о прошивке
-    const flashInfo = await vscode.window.showInformationMessage(
-      `Прошивка: ${fileName}\nРазмер: ${this.formatFileSize(fileSize)}\n\nПродолжить?`,
-      { modal: true },
-      'Прошить',
-      'Отмена'
-    );
-    
-    if (flashInfo !== 'Прошить') {
-      return false;
-    }
-
-    // Выполняем прошивку с прогрессом
+    // Немедленно начинаем прошивку без диалогов
     return await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
-      title: 'Прошивка STM32...',
+      title: `Прошивка STM32: ${fileName}`,
       cancellable: false
     }, async (progress) => {
       try {
         progress.report({ message: 'Подготовка...' });
         
-        this.outputChannel.clear();
-        this.outputChannel.show();
         this.outputChannel.appendLine(`=== Прошивка STM32 ===`);
         this.outputChannel.appendLine(`Файл: ${fileName}`);
-        this.outputChannel.appendLine(`Путь: ${firmwarePath}`);
         this.outputChannel.appendLine(`Размер: ${this.formatFileSize(fileSize)}`);
         this.outputChannel.appendLine(`Программер: ${programmerPath}`);
         this.outputChannel.appendLine('');
@@ -158,7 +151,7 @@ class FlashManager {
           throw new Error(`Неподдерживаемый формат файла: ${fileExt}`);
         }
         
-        progress.report({ message: 'Подготовка...' });
+        progress.report({ message: 'Проверка подключения...' });
         
         // Сначала проверяем подключение ST-LINK
         try {
@@ -169,6 +162,7 @@ class FlashManager {
             this.configManager.projectConfig,
             this.outputChannel
           );
+          this.outputChannel.appendLine('✅ ST-LINK подключен');
         } catch (error) {
           this.outputChannel.appendLine('⚠ ST-LINK проверка завершилась с ошибкой, продолжаем...');
         }
@@ -177,6 +171,8 @@ class FlashManager {
         
         // Выполняем прошивку
         const startTime = Date.now();
+        this.outputChannel.appendLine(`💾 Выполняем прошивку...`);
+        
         await execCommand(
           command,
           'Прошивка',
@@ -184,6 +180,7 @@ class FlashManager {
           this.configManager.projectConfig,
           this.outputChannel
         );
+        
         const endTime = Date.now();
         const flashTime = (endTime - startTime) / 1000;
         
@@ -203,14 +200,10 @@ class FlashManager {
         
         vscode.window.showInformationMessage(
           successMessage,
-          'Открыть вывод',
           'Запустить монитор',
           'Перезагрузить МК'
         ).then(async (choice) => {
-          if (choice === 'Открыть вывод') {
-            this.outputChannel.show();
-          } else if (choice === 'Запустить монитор') {
-            // Запуск монитора
+          if (choice === 'Запустить монитор') {
             vscode.commands.executeCommand('stm32.monitor');
           } else if (choice === 'Перезагрузить МК') {
             await this.resetMicrocontroller();
@@ -242,30 +235,15 @@ class FlashManager {
    * Прошивка с последующим запуском монитора
    */
   async uploadAndMonitor() {
-    // Всегда выполняем сборку перед прошивкой
-    const buildSuccess = await this.buildManager.build();
-    if (!buildSuccess) {
-      vscode.window.showErrorMessage('Сборка не удалась. Прошивка отменена.');
-      return false;
-    }
-    
-    // После сборки находим файл прошивки
-    const firmwarePath = await this.findFirmwareFile();
-    
-    if (!firmwarePath) {
-      vscode.window.showErrorMessage('Прошивка не найдена после сборки');
-      return false;
-    }
-    
-    // Выполняем прошивку
-    const flashSuccess = await this.flashFirmware(firmwarePath);
+    // Выполняем сборку и прошивку
+    const flashSuccess = await this.upload();
     
     if (!flashSuccess) {
       return false;
     }
     
     // Ждем перезагрузки МК
-    vscode.window.showInformationMessage('Ожидание перезагрузки МК...');
+    this.outputChannel.appendLine('⏳ Ожидание перезагрузки МК...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Запускаем монитор
@@ -278,22 +256,8 @@ class FlashManager {
    * Прошивка только что собранной прошивки
    */
   async flashLatestBuild() {
-    // Всегда выполняем сборку
-    const buildSuccess = await this.buildManager.build();
-    if (!buildSuccess) {
-      vscode.window.showErrorMessage('Сборка не удалась. Прошивка отменена.');
-      return false;
-    }
-    
-    // После сборки находим файл прошивки
-    const firmwarePath = await this.findFirmwareFile();
-    
-    if (!firmwarePath) {
-      vscode.window.showErrorMessage('Прошивка не найдена после сборки');
-      return false;
-    }
-    
-    return await this.flashFirmware(firmwarePath);
+    // Просто используем основной метод upload
+    return await this.upload();
   }
 
   /**
@@ -449,7 +413,7 @@ class FlashManager {
    * Стереть Flash память
    */
   async eraseFlash() {
-    const choice = vscode.window.showWarningMessage(
+    const choice = await vscode.window.showWarningMessage(
       'Вы уверены, что хотите стереть всю Flash память? Это действие необратимо.',
       { modal: true },
       'Стереть',
@@ -754,7 +718,7 @@ class FlashManager {
   }
 
   /**
-   * Загрузка истории из файла
+   * Загрузка истории из файл
    */
   async loadHistoryFromFile() {
     if (!this.workspacePath) return;
@@ -836,51 +800,8 @@ class FlashManager {
    * Быстрая прошивка (без подтверждений)
    */
   async quickFlash() {
-    // Всегда выполняем сборку
-    const buildSuccess = await this.buildManager.build();
-    if (!buildSuccess) {
-      vscode.window.showErrorMessage('Сборка не удалась. Прошивка отменена.');
-      return false;
-    }
-    
-    // После сборки находим файл прошивки
-    const firmwarePath = await this.findFirmwareFile();
-    
-    if (!firmwarePath) {
-      vscode.window.showErrorMessage('Прошивка не найдена после сборки');
-      return false;
-    }
-    
-    try {
-      this.outputChannel.clear();
-      this.outputChannel.show();
-      
-      const programmerPath = this.configManager.projectConfig.programmerPath;
-      const fileExt = path.extname(firmwarePath).toLowerCase();
-      
-      let command;
-      if (fileExt === '.hex') {
-        command = `"${programmerPath}" -c port=SWD -w "${firmwarePath}" -v -rst`;
-      } else {
-        command = `"${programmerPath}" -c port=SWD -w "${firmwarePath}" 0x08000000 -v -rst`;
-      }
-      
-      await execCommand(
-        command,
-        'Быстрая прошивка',
-        this.workspacePath,
-        this.configManager.projectConfig,
-        this.outputChannel
-      );
-      
-      vscode.window.showInformationMessage('Быстрая прошивка завершена!');
-      return true;
-    } catch (error) {
-      console.error('Ошибка быстрой прошивки:', error);
-      vscode.window.showErrorMessage(`Ошибка быстрой прошивки: ${error.message}`);
-      this.outputChannel.show();
-      return false;
-    }
+    // Просто используем основной метод upload
+    return await this.upload();
   }
 }
 

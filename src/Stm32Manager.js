@@ -1,5 +1,7 @@
 const vscode = require('vscode');
 const os = require('os');
+//const fs = require('fs');
+//const path = require('path');
 
 // Импортируем менеджеры
 const ConfigManager = require('./managers/ConfigManager');
@@ -16,6 +18,8 @@ class Stm32Manager {
     this.currentPlatform = os.platform();
     this.outputChannel = vscode.window.createOutputChannel('STM32 Build');
     this.treeProvider = null;
+    //this.configWatchers = [];
+    //this.context = context;
     
     // Сначала устанавливаем workspacePath из текущего рабочего пространства
     this.setInitialWorkspace();
@@ -62,11 +66,237 @@ class Stm32Manager {
       this.configManager,
       this.outputChannel
     );
+
+    // Настраиваем FileSystemWatcher для отслеживания изменений конфига
+    this.setupConfigWatcher();
     
     // Загружаем историю прошивок
     if (this.flashManager) {
       this.flashManager.loadHistoryFromFile();
     }
+  }
+
+  /**
+   * Настраивает FileSystemWatcher для отслеживания изменений конфига
+   */
+  setupConfigWatcher() {
+    // if (!this.workspacePath) return;
+
+    // // Удаляем существующие watchers
+    // this.disposeConfigWatchers();
+
+    // // Создаем новый watcher для .stm32-config.json
+    // const configWatcher = vscode.workspace.createFileSystemWatcher(
+    //   new vscode.RelativePattern(this.workspacePath, '.stm32-config.json')
+    // );
+    
+    // // Обработчик изменения конфига
+    // configWatcher.onDidChange(async (uri) => {
+    //   console.log('📄 .stm32-config.json изменен');
+    //   await this.handleConfigChange(uri);
+    // });
+    
+    // // Обработчик удаления конфига
+    // configWatcher.onDidDelete((uri) => {
+    //   console.log('🗑️ .stm32-config.json удален');
+    //   this.handleConfigDelete(uri);
+    // });
+    
+    // // Обработчик создания конфига
+    // configWatcher.onDidCreate((uri) => {
+    //   console.log('🆕 .stm32-config.json создан');
+    //   this.handleConfigCreate(uri);
+    // });
+    
+    // // Сохраняем watcher для последующего освобождения
+    // this.configWatchers.push(configWatcher);
+    
+    // // Добавляем в контекст для автоматического освобождения
+    // if (this.context) {
+    //   this.context.subscriptions.push(configWatcher);
+    // }
+    
+    // console.log('👁️  FileSystemWatcher настроен для .stm32-config.json');
+  }
+
+  /**
+   * Обрабатывает изменение конфига
+   */
+  async handleConfigChange(uri) {
+    // try {
+    //   // Загружаем обновленный конфиг
+    //   this.configManager.loadConfig();
+      
+    //   // Всегда обновляем c_cpp_properties.json
+    //   await this.configManager.updateCppProperties();
+      
+    //   // Проверяем флаг autoUpdateMakefile
+    //   if (this.configManager.projectConfig.autoUpdateMakefile) {
+    //     console.log('⚡ Автообновление Makefile включено - выполняем полную перезапись');
+        
+    //     // ВСЕГДА полная перезапись без проверок
+    //     const success = this.projectManager.makefileGenerator.updateMakefile();
+        
+    //     if (success) {
+    //       // Показываем уведомление с опцией показа изменений
+    //       const choice = await vscode.window.showInformationMessage(
+    //         'Makefile автоматически обновлен по конфигурации',
+    //         'Показать изменения',
+    //         'Открыть Makefile',
+    //         'Закрыть'
+    //       );
+          
+    //       if (choice === 'Показать изменения') {
+    //         await this.showMakefileChanges();
+    //       } else if (choice === 'Открыть Makefile') {
+    //         await this.openMakefile();
+    //       }
+    //     }
+    //   } else {
+    //     console.log('⚠ Автообновление Makefile отключено - пропускаем');
+    //     vscode.window.showInformationMessage(
+    //       'Конфигурация обновлена, но автообновление Makefile отключено',
+    //       'Обновить вручную',
+    //       'Настройки'
+    //     ).then(choice => {
+    //       if (choice === 'Обновить вручную') {
+    //         this.forceRegenerateMakefile();
+    //       } else if (choice === 'Настройки') {
+    //         this.openConfigFile();
+    //       }
+    //     });
+    //   }
+      
+    //   // Обновляем Tree View
+    //   this.refreshView();
+      
+    // } catch (error) {
+    //   console.error('Ошибка обработки изменения конфига:', error);
+    //   vscode.window.showErrorMessage(`Ошибка обработки конфига: ${error.message}`);
+    // }
+  }
+
+  /**
+   * Обрабатывает удаление конфига
+   */
+  handleConfigDelete(uri) {
+    // console.log('🗑️  .stm32-config.json удален, сбрасываем конфиг...');
+    
+    // // Сбрасываем конфиг к значениям по умолчанию
+    // this.configManager.resetToDefaults();
+    
+    // // Обновляем c_cpp_properties.json
+    // this.configManager.updateCppProperties();
+    
+    // // Если автообновление включено - перегенерируем Makefile
+    // if (this.configManager.projectConfig.autoUpdateMakefile) {
+    //   this.projectManager.makefileGenerator.generateMakefile();
+    // }
+    
+    // vscode.window.showWarningMessage(
+    //   'Конфигурация проекта сброшена к значениям по умолчанию',
+    //   'Восстановить',
+    //   'Закрыть'
+    // ).then(choice => {
+    //   if (choice === 'Восстановить') {
+    //     this.configManager.saveConfig();
+    //   }
+    // });
+    
+    // this.refreshView();
+  }
+
+  /**
+   * Обрабатывает создание конфига
+   */
+  handleConfigCreate(uri) {
+    // console.log('🆕 Новый .stm32-config.json создан');
+    // this.configManager.loadConfig();
+    // this.refreshView();
+  }
+
+  /**
+   * Показывает изменения в Makefile
+   */
+  async showMakefileChanges() {
+    // const backupPath = path.join(this.workspacePath, 'Makefile.backup');
+    // const makefilePath = path.join(this.workspacePath, 'Makefile');
+    // const originalPath = path.join(this.workspacePath, 'Makefile.original');
+
+    // if (!fs.existsSync(makefilePath)) {
+    //   vscode.window.showWarningMessage('Makefile не найден');
+    //   return;
+    // }
+
+    // // Определяем, с чем сравнивать
+    // let comparePath = backupPath;
+    // let compareLabel = 'Makefile.backup';
+    
+    // if (!fs.existsSync(backupPath) && fs.existsSync(originalPath)) {
+    //   comparePath = originalPath;
+    //   compareLabel = 'Makefile.original';
+    // } else if (!fs.existsSync(backupPath)) {
+    //   vscode.window.showInformationMessage('Нет резервной копии для сравнения');
+    //   return;
+    // }
+
+    // // Открываем diff в VS Code
+    // try {
+    //   await vscode.commands.executeCommand(
+    //     'vscode.diff',
+    //     vscode.Uri.file(comparePath),
+    //     vscode.Uri.file(makefilePath),
+    //     `${compareLabel} ↔ Makefile`
+    //   );
+    // } catch (error) {
+    //   console.error('Ошибка открытия diff:', error);
+    //   vscode.window.showErrorMessage('Не удалось открыть сравнение файлов');
+    // }
+  }
+
+  /**
+   * Открывает Makefile в редакторе
+   */
+  async openMakefile() {
+    // const makefilePath = path.join(this.workspacePath, 'Makefile');
+    // if (fs.existsSync(makefilePath)) {
+    //   const doc = await vscode.workspace.openTextDocument(makefilePath);
+    //   await vscode.window.showTextDocument(doc);
+    // } else {
+    //   vscode.window.showWarningMessage('Makefile не найден');
+    // }
+  }
+
+  /**
+   * Открывает конфиг в редакторе
+   */
+  async openConfigFile() {
+    // const configPath = path.join(this.workspacePath, '.stm32-config.json');
+    // if (fs.existsSync(configPath)) {
+    //   const doc = await vscode.workspace.openTextDocument(configPath);
+    //   await vscode.window.showTextDocument(doc);
+    // } else {
+    //   vscode.window.showWarningMessage('Конфиг не найден');
+    // }
+  }
+
+  /**
+   * Принудительная перезапись Makefile
+   */
+  async forceRegenerateMakefile() {
+    // const choice = await vscode.window.showWarningMessage(
+    //   'Вы уверены, что хотите полностью перезаписать Makefile?',
+    //   { modal: true },
+    //   'Да, перезаписать',
+    //   'Отмена'
+    // );
+    
+    // if (choice === 'Да, перезаписать') {
+    //   const success = this.projectManager.makefileGenerator.generateMakefile();
+    //   if (success) {
+    //     vscode.window.showInformationMessage('Makefile успешно перезаписан');
+    //   }
+    // }
   }
 
   /**
@@ -99,35 +329,11 @@ class Stm32Manager {
     if (oldWorkspacePath !== this.workspacePath) {
       console.log('Workspace updated:', oldWorkspacePath, '->', this.workspacePath);
       
-      // Обновляем workspacePath во всех менеджерах, которые поддерживают это
-      if (this.configManager) {
-        this.configManager.workspacePath = this.workspacePath;
-        this.configManager.loadConfig();
-      }
+      // Обновляем workspacePath во всех менеджерах
+      //this.updateManagersWorkspace();
       
-      if (this.connectionManager) {
-        this.connectionManager.workspacePath = this.workspacePath;
-      }
-      
-      if (this.projectManager) {
-        this.projectManager.workspacePath = this.workspacePath;
-      }
-      
-      if (this.buildManager) {
-        this.buildManager.workspacePath = this.workspacePath;
-      }
-      
-      if (this.flashManager) {
-        this.flashManager.workspacePath = this.workspacePath;
-      }
-      
-      if (this.monitorManager) {
-        this.monitorManager.workspacePath = this.workspacePath;
-      }
-      
-      if (this.toolsManager) {
-        this.toolsManager.workspacePath = this.workspacePath;
-      }
+      // Пересоздаем watcher для нового workspace
+      //this.setupConfigWatcher();
       
       // Загружаем историю для нового workspace
       if (this.flashManager && this.workspacePath) {
@@ -136,11 +342,68 @@ class Stm32Manager {
     }
     
     // Обновляем tree view
-    if (this.treeProvider) {
-      this.treeProvider.refresh();
-    }
+    this.refreshView();
     
     return this.workspacePath;
+  }
+
+  /**
+   * Обновляет workspacePath во всех менеджерах
+   */
+  updateManagersWorkspace() {
+    // const managers = [
+    //   this.configManager,
+    //   this.connectionManager,
+    //   this.projectManager,
+    //   this.buildManager,
+    //   this.flashManager,
+    //   this.monitorManager,
+    //   this.toolsManager
+    // ];
+    
+    // managers.forEach(manager => {
+    //   if (manager && typeof manager.workspacePath !== 'undefined') {
+    //     manager.workspacePath = this.workspacePath;
+    //   }
+    // });
+    
+    // // Перезагружаем конфиг для нового workspace
+    // if (this.configManager) {
+    //   this.configManager.loadConfig();
+    // }
+  }
+
+  /**
+   * Освобождает ресурсы FileSystemWatcher
+   */
+  disposeConfigWatchers() {
+    // this.configWatchers.forEach(watcher => {
+    //   if (watcher && watcher.dispose) {
+    //     watcher.dispose();
+    //   }
+    // });
+    // this.configWatchers = [];
+  }
+
+  /**
+   * Освобождает все ресурсы
+   */
+  dispose() {
+    // this.disposeConfigWatchers();
+    // this.closeSerialPort();
+    
+    // if (this.outputChannel) {
+    //   this.outputChannel.dispose();
+    // }
+  }
+
+  /**
+   * Закрытие последовательного порта
+   */
+  closeSerialPort() {
+    // if (this.monitorManager) {
+    //   this.monitorManager.stopMonitor();
+    // }
   }
 
   // Делегирование методов ProjectManager
@@ -148,16 +411,8 @@ class Stm32Manager {
     return this.projectManager.setupProject();
   }
 
-  async checkLinkerScript() {
-    // TODO: Нужно убрать из команд
-  }
-
-  async createProjectStructure() {
-        // TODO: Нужно убрать из команд
-  }
-
-  async updateProjectPaths() {
-        // TODO: Нужно убрать из команд
+  async fixMakefile() {
+    return this.projectManager.generateMakefile();
   }
 
   // Делегирование методов BuildManager
@@ -177,36 +432,8 @@ class Stm32Manager {
     return this.buildManager.fullClean();
   }
 
-  async fixMakefile() {
-    return this.projectManager.generateMakefile();
-  }
-
-  async restoreOriginalMakefile() {
-        // TODO: Нужно убрать из команд
-  }
-
   async analyzeFirmwareSize() {
     return this.buildManager.analyzeFirmwareSize();
-  }
-
-  async buildWithDebug() {
-        // TODO: Нужно убрать из команд
-    return false;
-  }
-
-  async buildRelease() {
-    // TODO: Нужно убрать из команд
-    return false;
-  }
-
-  async showBuildInfo() {
-        // TODO: Нужно убрать из команд;
-    return false;
-  }
-
-  async cleanOutputFiles() {
-    // TODO: Нужно убрать из команд
-    return false;
   }
 
   // Делегирование методов ConnectionManager
@@ -434,7 +661,7 @@ class Stm32Manager {
     return this.configManager.updateToolPaths();
   }
 
-  // Метод для работы с конфигурацией (для активации)
+  // Метод для работы с конфигурацией
   async loadConfig() {
     if (this.configManager) {
       return this.configManager.loadConfig();
@@ -448,8 +675,8 @@ class Stm32Manager {
       this.treeProvider.refresh();
     }
   }
-  
-  // Закрытие последовательного порта (для деактивации)
+
+    // Закрытие последовательного порта (для деактивации)
   closeSerialPort() {
     // Этот метод может быть пустым или вызывать stopMonitor
     if (this.monitorManager) {

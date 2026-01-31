@@ -36,6 +36,7 @@ class ProjectManager {
 
     // Сохраняем конфигурацию
     this.configManager.saveConfig();
+    await this.configManager.updateCppProperties();
 
     // Создаем/обновляем Makefile
     await this.makefileGenerator.generateMakefile();
@@ -114,7 +115,7 @@ class ProjectManager {
     
     if (iocInfo) {
       infoText += '📋 Информация из .ioc файла:\n';
-      infoText += `  3. Микроконтроллер: ${iocInfo.mcu}\n`;
+      infoText += `  Микроконтроллер: ${iocInfo.mcu}\n`;
       infoText += `  Семейство: ${iocInfo.family}\n`;
       infoText += `  Проект: ${iocInfo.projectName}\n`;
       infoText += `  Компилятор: ${iocInfo.compiler}\n\n`;
@@ -148,6 +149,8 @@ class ProjectManager {
     
     // Создаем settings.json
     await this.createSettingsConfig(vscodeDir);
+
+    await this.configManager.updateCppProperties();
   }
 
   /**
@@ -229,24 +232,20 @@ class ProjectManager {
    */
   async generateMakefile() {
     try {
-      const success = this.makefileGenerator.generateMakefile();
+      // Просто генерируем новый Makefile с актуальной конфигурацией
+      const success = this.makefileGenerator.generate();
+      
       if (success) {
-        this.outputChannel.appendLine('✅ Makefile успешно сгенерирован');
+        this.outputChannel.appendLine('✅ Makefile создан/обновлен');
+        return true;
       } else {
-        this.outputChannel.appendLine('❌ Ошибка генерации Makefile');
+        this.outputChannel.appendLine('❌ Ошибка создания Makefile');
+        return false;
       }
-      return success;
     } catch (error) {
-      this.outputChannel.appendLine(`❌ Ошибка генерации Makefile: ${error.message}`);
+      this.outputChannel.appendLine(`❌ Ошибка: ${error.message}`);
       return false;
     }
-  }
-
-  /**
-   * Проверяет актуальность Makefile
-   */
-  async checkMakefile() {
-    return this.makefileGenerator.checkMakefile();
   }
 }
 

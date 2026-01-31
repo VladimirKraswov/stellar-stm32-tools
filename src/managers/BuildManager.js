@@ -18,98 +18,68 @@ class BuildManager {
    */
   async checkProjectFiles() {
     const config = this.configManager.projectConfig;
-    
+    let missingFiles = [];
+
     // Проверяем линкер
     if (!config.ldscript || !config.ldscriptPath) {
       this.outputChannel.appendLine('⚠️ Линкер не найден в конфигурации');
       const ldConfig = await this.configManager.findLinkerScript();
-      if (!ldConfig) {
-        return await this.handleMissingLinker();
+      if (ldConfig) {
+        config.ldscript = ldConfig.ldscript;
+        config.ldscriptPath = ldConfig.ldscriptPath;
+        this.configManager.saveConfig();
+        this.outputChannel.appendLine(`✅ Найден линкер: ${config.ldscript}`);
+      } else {
+        missingFiles.push('линкер');
       }
-      config.ldscript = ldConfig.ldscript;
-      config.ldscriptPath = ldConfig.ldscriptPath;
-      this.configManager.saveConfig();
+    } else {
+      // Проверяем что файл существует
+      if (!fs.existsSync(config.ldscriptPath)) {
+        this.outputChannel.appendLine('⚠️ Файл линкера не найден по указанному пути');
+        config.ldscript = null;
+        config.ldscriptPath = null;
+        this.configManager.saveConfig();
+        missingFiles.push('линкер');
+      }
     }
 
     // Проверяем стартап файл
     if (!config.startupFile || !config.startupFilePath) {
       this.outputChannel.appendLine('⚠️ Стартап файл не найден в конфигурации');
       const startupConfig = await this.configManager.findStartupFile();
-      if (!startupConfig) {
-        return await this.handleMissingStartup();
+      if (startupConfig) {
+        config.startupFile = startupConfig.startupFile;
+        config.startupFilePath = startupConfig.startupFilePath;
+        this.configManager.saveConfig();
+        this.outputChannel.appendLine(`✅ Найден стартап: ${config.startupFile}`);
+      } else {
+        missingFiles.push('стартап файл');
       }
-      config.startupFile = startupConfig.startupFile;
-      config.startupFilePath = startupConfig.startupFilePath;
-      this.configManager.saveConfig();
+    } else {
+      // Проверяем что файл существует
+      if (!fs.existsSync(config.startupFilePath)) {
+        this.outputChannel.appendLine('⚠️ Файл стартапа не найден по указанному пути');
+        config.startupFile = null;
+        config.startupFilePath = null;
+        this.configManager.saveConfig();
+        missingFiles.push('стартап файл');
+      }
+    }
+
+    // Если есть недостающие файлы, показываем ошибку
+    if (missingFiles.length > 0) {
+      const choice = await vscode.window.showWarningMessage(
+        `Не найдены: ${missingFiles.join(', ')}. Продолжить сборку?`,
+        'Продолжить без них',
+        'Отмена сборки'
+      );
+      
+      if (choice !== 'Продолжить без них') {
+        return false;
+      }
     }
 
     return true;
-  }
-
-  /**
-   * Обработка отсутствия линкера
-   */
-  async handleMissingLinker() {
-    const choice = await vscode.window.showWarningMessage(
-      'Скрипт линкера не найден. Выберите действие:',
-      'Найти автоматически',
-      'Выбрать вручную',
-      'Отмена сборки'
-    );
-
-    switch (choice) {
-      case 'Найти автоматически':
-        const ldConfig = await this.configManager.findLinkerScript();
-        if (ldConfig) {
-          this.configManager.projectConfig.ldscript = ldConfig.ldscript;
-          this.configManager.projectConfig.ldscriptPath = ldConfig.ldscriptPath;
-          this.configManager.saveConfig();
-          return true;
-        }
-        break;
-
-      case 'Выбрать вручную':
-        return await this.selectLinkerScript();
-
-      default:
-        return false;
-    }
-    return false;
-  }
-
-  /**
-   * Обработка отсутствия стартап файла
-   */
-  async handleMissingStartup() {
-    const choice = await vscode.window.showWarningMessage(
-      'Стартап файл не найден. Выберите действие:',
-      'Найти автоматически',
-      'Выбрать вручную',
-      'Продолжить без стартапа'
-    );
-
-    switch (choice) {
-      case 'Найти автоматически':
-        const startupConfig = await this.configManager.findStartupFile();
-        if (startupConfig) {
-          this.configManager.projectConfig.startupFile = startupConfig.startupFile;
-          this.configManager.projectConfig.startupFilePath = startupConfig.startupFilePath;
-          this.configManager.saveConfig();
-          return true;
-        }
-        break;
-
-      case 'Выбрать вручную':
-        return await this.selectStartupFile();
-
-      case 'Продолжить без стартапа':
-        this.outputChannel.appendLine('⚠️ Сборка продолжается без стартап файла');
-        return true;
-
-      default:
-        return false;
-    }
-    return false;
   }
 
   /**
@@ -129,9 +99,13 @@ class BuildManager {
       return false;
     }
 
-    // Обновляем Makefile если нужно
-    if (this.configManager.projectConfig.autoUpdateMakefile) {
-      this.makefileGenerator.updateMakefile();
+    // ВСЕГДА создаем новый Makefile перед сборкой
+    this.outputChannel.appendLine('🔄 Создание Makefile...');
+    const makefileCreated = this.makefileGenerator.generate();
+    
+    if (!makefileCreated) {
+      vscode.window.showErrorMessage('❌ Не удалось создать Makefile');
+      return false;
     }
 
     // Выполняем сборку
@@ -197,8 +171,8 @@ class BuildManager {
       this.outputChannel.appendLine(`Микроконтроллер: ${config.mcu}`);
     }
     
-    this.outputChannel.appendLine(`Скрипт линкера: ${config.ldscript}`);
-    this.outputChannel.appendLine(`Стартап файл: ${config.startupFile}.s`);
+    this.outputChannel.appendLine(`Скрипт линкера: ${config.ldscript || 'не найден'}`);
+    this.outputChannel.appendLine(`Стартап файл: ${config.startupFile ? config.startupFile + '.s' : 'не найден'}`);
     
     this.outputChannel.appendLine(`\n🔧 Параметры компилятора:`);
     this.outputChannel.appendLine(`  CPU: ${mcuParams.cpu}`);
@@ -396,7 +370,7 @@ class BuildManager {
     
     let targetElfPath = null;
     
-    if (fs.existsSync(elfPath) ) {
+    if (fs.existsSync(elfPath)) {
       targetElfPath = elfPath;
     } else if (fs.existsSync(binElfPath)) {
       targetElfPath = binElfPath;
@@ -492,6 +466,10 @@ class BuildManager {
     try {
       this.outputChannel.clear();
       this.outputChannel.show();
+      
+      // Создаем Makefile перед быстрой сборкой
+      this.outputChannel.appendLine('🔄 Создание Makefile...');
+      this.makefileGenerator.generate();
       
       // Показываем краткую информацию о проекте
       const iocInfo = this.configManager.getIOCInfo();
@@ -615,25 +593,33 @@ class BuildManager {
     }
     
     // Проверка скрипта линкера
-    const ldscriptPath = path.join(this.workspacePath, config.ldscript);
-    if (fs.existsSync(ldscriptPath)) {
-      this.outputChannel.appendLine(`✅ Скрипт линкера: ${config.ldscript} (найден)`);
+    if (config.ldscriptPath) {
+      if (fs.existsSync(config.ldscriptPath)) {
+        this.outputChannel.appendLine(`✅ Скрипт линкера: ${config.ldscript} (найден)`);
+      } else {
+        this.outputChannel.appendLine(`❌ Скрипт линкера: ${config.ldscript} (НЕ НАЙДЕН)`);
+      }
     } else {
-      this.outputChannel.appendLine(`❌ Скрипт линкера: ${config.ldscript} (НЕ НАЙДЕН)`);
+      this.outputChannel.appendLine('❌ Скрипт линкера: не настроен');
     }
     
-    // Проверка Makefile
-    const makefileCheck = this.makefileGenerator.checkMakefile();
-    if (makefileCheck.upToDate) {
-      this.outputChannel.appendLine(`✅ Makefile: ${makefileCheck.message}`);
-    } else {
-      this.outputChannel.appendLine(`❌ Makefile: ${makefileCheck.message}`);
-      if (makefileCheck.details) {
-        this.outputChannel.appendLine(`   Текущий стартап: ${makefileCheck.details.currentStartup}`);
-        this.outputChannel.appendLine(`   Ожидаемый стартап: ${makefileCheck.details.expectedStartup}`);
-        this.outputChannel.appendLine(`   Текущий линкер: ${makefileCheck.details.currentLdscript}`);
-        this.outputChannel.appendLine(`   Ожидаемый линкер: ${makefileCheck.details.expectedLdscript}`);
+    // Проверка стартап файла
+    if (config.startupFilePath) {
+      if (fs.existsSync(config.startupFilePath)) {
+        this.outputChannel.appendLine(`✅ Стартап файл: ${config.startupFile}.s (найден)`);
+      } else {
+        this.outputChannel.appendLine(`❌ Стартап файл: ${config.startupFile}.s (НЕ НАЙДЕН)`);
       }
+    } else {
+      this.outputChannel.appendLine('❌ Стартап файл: не настроен');
+    }
+    
+    // Проверка Makefile (только наличие)
+    const makefilePath = path.join(this.workspacePath, 'Makefile');
+    if (fs.existsSync(makefilePath)) {
+      this.outputChannel.appendLine('✅ Makefile: найден (будет перезаписан перед сборкой)');
+    } else {
+      this.outputChannel.appendLine('⚠️  Makefile: не найден (будет создан перед сборкой)');
     }
     
     this.outputChannel.appendLine('\n=== Рекомендации ===');

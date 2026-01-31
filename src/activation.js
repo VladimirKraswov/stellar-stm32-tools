@@ -100,6 +100,27 @@ function activate(context) {
           });
         }
       }),
+
+      register('stm32.forceRegenerateMakefile', async () => {
+        if (!stm32Manager.workspacePath) {
+          vscode.window.showErrorMessage('Откройте папку проекта сначала');
+          return;
+        }
+        
+        const choice = await vscode.window.showWarningMessage(
+          'Вы уверены, что хотите полностью перезаписать Makefile?',
+          { modal: true },
+          'Да, перезаписать',
+          'Отмена'
+        );
+        
+        if (choice === 'Да, перезаписать') {
+          const success = await stm32Manager.projectManager.makefileGenerator.generateMakefile();
+          if (success) {
+            vscode.window.showInformationMessage('Makefile успешно перезаписан');
+          }
+        }
+      }),
       
       // Debug
       register('stm32.debug', () => {

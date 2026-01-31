@@ -41,6 +41,8 @@ class ConfigManager {
     } else {
       this.projectConfig = defaultConfig;
     }
+
+    this.updateCppProperties();
   }
 
   /**
@@ -240,12 +242,16 @@ class ConfigManager {
       // Перезагружаем конфиг сразу после сохранения
       this.loadConfig();
       
+      // Обновляем c_cpp_properties.json
+      this.updateCppProperties();
+      
       return true;
     } catch (error) {
       console.error('Ошибка сохранения конфигурации:', error);
       vscode.window.showErrorMessage(`Ошибка сохранения конфигурации: ${error.message}`);
       return false;
     }
+    
   }
 
   /**
@@ -749,6 +755,70 @@ class ConfigManager {
    */
   getIOCConfig() {
     return this.iocConfig;
+  }
+
+    // Метод для обновления c_cpp_properties.json
+  async updateCppProperties() {
+    if (!this.workspacePath) return;
+
+    const vscodeDir = path.join(this.workspacePath, '.vscode');
+    if (!fs.existsSync(vscodeDir)) {
+      fs.mkdirSync(vscodeDir, { recursive: true });
+    }
+
+    const cppPropertiesPath = path.join(vscodeDir, 'c_cpp_properties.json');
+
+    // Собираем данные из конфига
+    const includePaths = this.projectConfig.includeDirs || [];
+    const defines = this.projectConfig.defines || ['USE_HAL_DRIVER', this.getMCUParams(this.projectConfig.mcu).define];
+
+    // Базовая структура файла
+    const cppConfig = {
+      "configurations": [
+        {
+          "name": "STM32",
+          "includePath": includePaths.map(p => `\${workspaceFolder}/${p}`),
+          "defines": defines,
+          "compilerPath": this.projectConfig.gccPath || "/usr/bin/arm-none-eabi-gcc",  // Берем из конфига или дефолт
+          "cStandard": "c11",
+          "cppStandard": "c++17",
+          "intelliSenseMode": "gcc-arm",
+          "browse": {
+            "path": includePaths.map(p => `\${workspaceFolder}/${p}`),
+            "limitSymbolsToIncludedHeaders": true
+          }
+        }
+      ],
+      "version": 4
+    };
+
+    // Читаем существующий файл, если есть, и мержим (чтобы не перезаписывать пользовательские изменения полностью)
+    let existingConfig = {};
+    if (fs.existsSync(cppPropertiesPath)) {
+      try {
+        existingConfig = JSON.parse(fs.readFileSync(cppPropertiesPath, 'utf8'));
+        // Мержим: обновляем includePath и defines в первой конфигурации
+        if (existingConfig.configurations && existingConfig.configurations.length > 0) {
+          existingConfig.configurations[0].includePath = cppConfig.configurations[0].includePath;
+          existingConfig.configurations[0].defines = cppConfig.configurations[0].defines;
+          // Можно добавить мерж других полей, если нужно
+        }
+      } catch (e) {
+        console.error('Ошибка чтения c_cpp_properties.json:', e);
+      }
+    } else {
+      existingConfig = cppConfig;  // Если файла нет, создаем новый
+    }
+
+    // Записываем
+    try {
+      fs.writeFileSync(cppPropertiesPath, JSON.stringify(existingConfig, null, 2));
+      console.log('c_cpp_properties.json обновлен');
+      vscode.window.showInformationMessage('IntelliSense конфигурация обновлена (c_cpp_properties.json)');
+    } catch (error) {
+      console.error('Ошибка записи c_cpp_properties.json:', error);
+      vscode.window.showErrorMessage(`Ошибка обновления IntelliSense: ${error.message}`);
+    }
   }
 }
 module.exports = ConfigManager;
