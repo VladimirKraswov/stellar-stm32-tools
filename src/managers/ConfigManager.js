@@ -158,7 +158,7 @@ class ConfigManager {
         serialPortPattern = 'COM*';
         break;
       case 'darwin':
-        serialPortPattern = '/dev/tty*usb*'; // Изменено для лучшего захвата usbmodem
+        serialPortPattern = '/dev/tty*usb*';
         break;
       case 'linux':
         serialPortPattern = '/dev/ttyUSB*';
